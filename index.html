@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 
 <head>
     <meta charset="UTF-8">
@@ -34,6 +34,7 @@
         .news-image {
             max-width: 100%;
             margin: 5px 0;
+            display: block;
         }
 
         .news-link {
@@ -46,6 +47,75 @@
             padding: 6px;
             border-radius: 6px;
         }
+
+        .tags {
+            margin: 5px 0;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 6px;
+            margin-right: 5px;
+            font-size: 0.8em;
+            border-radius: 4px;
+            color: white;
+            cursor: default;
+        }
+
+        /* Tag-specific colors */
+        .tag-公演 {
+            background-color: #007bff;
+        }
+
+        .tag-準備 {
+            background-color: #28a745;
+        }
+
+        .tag-連絡 {
+            background-color: #ffc107;
+            color: black;
+        }
+
+        .tag-重要 {
+            background-color: #dc3545;
+        }
+
+        /* Filter bar */
+        .filter-bar {
+            margin: 0px;
+            padding: 0px;
+        }
+
+        .filter-tag {
+            display: inline-block;
+            padding: 6px 10px;
+            margin: 4px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            color: white;
+        }
+
+        .filter-tag.active {
+            border: 2px solid black;
+        }
+
+        .filter-tag-公演 {
+            background-color: #007bff;
+        }
+
+        .filter-tag-準備 {
+            background-color: #28a745;
+        }
+
+        .filter-tag-連絡 {
+            background-color: #ffc107;
+            color: black;
+        }
+
+        .filter-tag-重要 {
+            background-color: #dc3545;
+        }
     </style>
 </head>
 
@@ -53,16 +123,28 @@
 
     <h1>三年劇関連情報</h1>
     <p>情報はリアルタイムで更新しています。</p>
+
     <h2>便利なリンク</h2>
     <div class="container">
         ・<a href="">著作権に関するルール</a><br>
         ・<a href="assets/三舞会規制.pdf">三舞会規制</a><br>
         ・<a href="assets/2025年度文化常任委員会学校祭総合規制.pdf">文常規制</a>
     </div>
+
+    <h4>タグで絞り込み</h4>
+    <div class="filter-bar">
+        <span class="filter-tag filter-tag-公演" data-value="公演">#公演</span>
+        <span class="filter-tag filter-tag-準備" data-value="準備">#準備</span>
+        <span class="filter-tag filter-tag-連絡" data-value="連絡">#連絡</span>
+        <span class="filter-tag filter-tag-重要" data-value="重要">#重要</span>
+        <span class="filter-tag" id="clearFilter" style="background:#666;">全て表示</span>
+    </div>
+
     <h2>連絡一覧</h2>
     <div class="container">
         <div id="news-container">データ読み込み中...</div>
     </div>
+
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
@@ -80,35 +162,99 @@
 
         const newsContainer = document.getElementById('news-container');
 
-        // Function to detect URLs and convert to clickable links
+        // clickable links
         function linkify(text) {
             const urlRegex = /(https?:\/\/[^\s]+)/g;
             return text.replace(urlRegex, url => `<a class="news-link" href="${url}" target="_blank">${url}</a>`);
         }
 
+        // state
+        let allNews = [];
+        let activeFilters = new Set();
+
+        function renderNews() {
+            newsContainer.innerHTML = "";
+
+            let filteredNews = allNews;
+            if (activeFilters.size > 0) {
+                filteredNews = allNews.filter(item =>
+                    Array.isArray(item.tags) && item.tags.some(tag => activeFilters.has(tag))
+                );
+            }
+
+            if (filteredNews.length === 0) {
+                newsContainer.innerHTML = "<p>該当するニュースはありません。</p>";
+                return;
+            }
+
+            filteredNews.forEach((data) => {
+                const newsItem = document.createElement("div");
+                newsItem.className = "news-item";
+
+                let imagesHtml = "";
+                if (Array.isArray(data.imageUrls)) {
+                    imagesHtml = data.imageUrls.map(url =>
+                        `<img class="news-image" src="${url}" alt="news image">`
+                    ).join("");
+                }
+
+                let tagsHtml = "";
+                if (Array.isArray(data.tags)) {
+                    tagsHtml = `<div class="tags">` +
+                        data.tags.map(tag => `<span class="tag tag-${tag}">#${tag}</span>`).join("") +
+                        `</div>`;
+                }
+
+                newsItem.innerHTML = `
+          <div class="news-title">${data.title}</div>
+          <div class="news-date">${data.date ? new Date(data.date.seconds * 1000).toLocaleString() : ""}</div>
+          ${tagsHtml}
+          <div class="news-content">${linkify(data.content)}</div>
+          ${imagesHtml}
+        `;
+
+                newsContainer.appendChild(newsItem);
+            });
+        }
+
+        // fetch data
         db.collection("news")
             .orderBy("date", "desc")
             .get()
             .then((querySnapshot) => {
-                newsContainer.innerHTML = "";
+                allNews = [];
                 querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    const newsItem = document.createElement("div");
-                    newsItem.className = "news-item";
-
-                    newsItem.innerHTML = `
-              <div class="news-title">${data.title}</div>
-              <div class="news-date">${data.date ? new Date(data.date.seconds * 1000).toLocaleString() : ""}</div>
-              <div class="news-content">${linkify(data.content)}</div>
-              ${data.imageUrl ? `<img class="news-image" src="${data.imageUrl}" alt="news image">` : ""}
-          `;
-
-                    newsContainer.appendChild(newsItem);
+                    allNews.push(doc.data());
                 });
+                renderNews();
             })
             .catch((error) => {
                 newsContainer.innerHTML = "Error loading news: " + error;
             });
+
+        // tag filter logic
+        document.querySelectorAll(".filter-tag").forEach(tagEl => {
+            const value = tagEl.getAttribute("data-value");
+
+            if (value) {
+                tagEl.addEventListener("click", () => {
+                    if (activeFilters.has(value)) {
+                        activeFilters.delete(value);
+                        tagEl.classList.remove("active");
+                    } else {
+                        activeFilters.add(value);
+                        tagEl.classList.add("active");
+                    }
+                    renderNews();
+                });
+            }
+        });
+
+        document.getElementById("clearFilter").addEventListener("click", () => {
+            activeFilters.clear();
+            document.querySelectorAll(".filter-tag").forEach(t => t.classList.remove("active"));
+            renderNews();
+        });
     </script>
 </body>
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 
 <head>
     <meta charset="UTF-8">
@@ -27,6 +27,43 @@
             margin-top: 10px;
             font-weight: bold;
         }
+
+        /* Tag selection styling */
+        .tag-options {
+            margin: 10px 0;
+        }
+
+        .tag-option {
+            display: inline-block;
+            padding: 6px 10px;
+            margin: 4px;
+            border-radius: 6px;
+            cursor: pointer;
+            user-select: none;
+            font-size: 0.9em;
+            color: white;
+        }
+
+        .tag-option.selected {
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.4);
+        }
+
+        .tag-公演 {
+            background-color: #007bff;
+        }
+
+        .tag-準備 {
+            background-color: #28a745;
+        }
+
+        .tag-連絡 {
+            background-color: #ffc107;
+            color: black;
+        }
+
+        .tag-重要 {
+            background-color: #dc3545;
+        }
     </style>
 </head>
 
@@ -36,7 +73,16 @@
     <form id="newsForm">
         <input type="text" id="title" placeholder="Title" required>
         <textarea id="content" placeholder="Content" rows="5" required></textarea>
-        <input type="file" id="imageFile" accept="image/*">
+        <input type="file" id="imageFiles" accept="image/*" multiple>
+
+        <label>タグ選択:</label>
+        <div class="tag-options" id="tagOptions">
+            <div class="tag-option tag-公演" data-value="公演">#公演</div>
+            <div class="tag-option tag-準備" data-value="準備">#準備</div>
+            <div class="tag-option tag-連絡" data-value="連絡">#連絡</div>
+            <div class="tag-option tag-重要" data-value="重要">#重要</div>
+        </div>
+
         <button type="submit">追加</button>
     </form>
 
@@ -61,32 +107,50 @@
         const storage = firebase.storage();
         const newsForm = document.getElementById("newsForm");
         const status = document.getElementById("status");
+        const tagOptions = document.querySelectorAll(".tag-option");
+
+        // Toggle selection on click
+        tagOptions.forEach(tag => {
+            tag.addEventListener("click", () => {
+                tag.classList.toggle("selected");
+            });
+        });
 
         newsForm.addEventListener("submit", async (e) => {
             e.preventDefault();
-            status.textContent = "Uploading..."; status.style.color = "black";
+            status.textContent = "Uploading...";
+            status.style.color = "black";
 
             const title = document.getElementById("title").value.trim();
             const content = document.getElementById("content").value.trim();
-            const imageFile = document.getElementById("imageFile").files[0];
+            const imageFiles = document.getElementById("imageFiles").files;
 
-            let imageUrl = "";
-            if (imageFile) {
-                const storageRef = storage.ref('news_images/' + Date.now() + '_' + imageFile.name);
-                const snapshot = await storageRef.put(imageFile);
-                imageUrl = await snapshot.ref.getDownloadURL();
+            // collect selected tags
+            const selectedTags = Array.from(document.querySelectorAll(".tag-option.selected"))
+                .map(tag => tag.getAttribute("data-value"));
+
+            let imageUrls = [];
+            if (imageFiles.length > 0) {
+                for (const file of imageFiles) {
+                    const storageRef = storage.ref('news_images/' + Date.now() + '_' + file.name);
+                    const snapshot = await storageRef.put(file);
+                    const url = await snapshot.ref.getDownloadURL();
+                    imageUrls.push(url);
+                }
             }
 
             db.collection("news").add({
                 title,
                 content,
-                imageUrl,
+                imageUrls,
+                tags: selectedTags,
                 date: firebase.firestore.FieldValue.serverTimestamp()
             })
                 .then(() => {
                     status.textContent = "News added successfully!";
                     status.style.color = "green";
                     newsForm.reset();
+                    document.querySelectorAll(".tag-option").forEach(tag => tag.classList.remove("selected"));
                 })
                 .catch((error) => {
                     status.textContent = "Error: " + error;
