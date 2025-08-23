@@ -11,6 +11,10 @@
             margin: 20px;
         }
 
+        h2 {
+            margin-bottom: 4px;
+        }
+
         .news-item {
             border-bottom: 1px solid #ccc;
             padding: 10px 0;
@@ -120,16 +124,16 @@
         ・<a href="assets/三舞会規制.pdf">三舞会規制</a><br>
         ・<a href="assets/2025年度文化常任委員会学校祭総合規制.pdf">文常規制</a>
     </div>
-
-    <h4>タグで絞り込み</h4>
-    <div class="filter-bar">
-        <span class="filter-tag filter-tag-広報" data-value="広報">#広報</span>
-        <span class="filter-tag filter-tag-リハ" data-value="リハ">#リハ</span>
-        <span class="filter-tag filter-tag-重要" data-value="重要">#重要</span>
-        <span class="filter-tag" id="clearFilter" style="background:#666;">全て表示</span>
-    </div>
-
     <h2>連絡一覧</h2>
+    <div class="container" style="margin-bottom: 8px;">
+        <p style="margin: 2px;">タグで絞り込み</p>
+        <div class="filter-bar">
+            <span class="filter-tag filter-tag-広報" data-value="広報">#広報</span>
+            <span class="filter-tag filter-tag-リハ" data-value="リハ">#リハ</span>
+            <span class="filter-tag filter-tag-重要" data-value="重要">#重要</span>
+            <span class="filter-tag" id="clearFilter" style="background:#666;">全て表示</span>
+        </div>
+    </div>
     <div class="container">
         <div id="news-container">データ読み込み中...</div>
     </div>
